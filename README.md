@@ -118,7 +118,7 @@ Actions: There are four actions that can be triggered from this tab
 Additional documentation is provided within Autoparty through the Info tab.
 
 
-If you identify any bugs or performance issues, please do not hesitate to open an issue!
+If you identify any bugs or performance problems, please do not hesitate to open an issue!
 
 ---
 
