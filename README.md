@@ -30,7 +30,7 @@ The application is then accessible through your internet browser at localhost:50
 
 ## Testing:
 
-To ensure that the python environment and all python code are installed correctly, cd into the main directory and run 
+To ensure that the python environment and all python files are set up correctly, cd into the main directory and run 
 
 ```python -m pytest tests ```
 
@@ -48,7 +48,7 @@ The default model trained during a hitpicking party consists of three separate a
 
 <b>Uploading a screen</b>
 
-Molecule interactions and fingerprints are generated and saved when a screen is first uploaded. In order to start a screen, the user needs to provide the path to the .pdb file and .sdf files, relative to the /inputs directory seen by Hitpicker. In addition to the files, the user needs to provide a property within the sdf file by which the molecules are initially ranked for annotation. (ex. "minimizedAffinity in \ref{fig:sdf}") Upon uploading, molecules are read from the provided sdf file and sent in batches of 50 to calculate intermolecular interactions. NOTE: This can be a long process, and hitpicking can begin while this is finishing.
+Molecule interactions and fingerprints are generated and saved when a screen is first uploaded. In order to start a screen, the user needs to provide the path to the .pdb file and .sdf files, relative to the /inputs directory seen by Hitpicker. In addition to the files, the user needs to provide a property within the sdf file by which the molecules are initially ranked for annotation. Upon uploading, molecules are read from the provided sdf file and sent in batches of 50 to calculate intermolecular interactions. NOTE: This can be a long process, and hitpicking can begin while this is finishing.
 
 <b>Getting the party started</b>
 Once the screen is uploaded, the the actual hitpicking-session can begin. The user is able to either start a new party by selecting the uploaded screen, or resume an existing party to recover existing grades, models, and predictions.
