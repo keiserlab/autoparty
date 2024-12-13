@@ -1,0 +1,39 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} Assign Labels {% endblock %}
+{% block stylesheets %}{% endblock stylesheets %}
+
+{% block content %}
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card ">
+             <div class="card-header">
+                <h1> {{ zid }} </h1>
+             </div>
+        <div id="2d-view">
+          {{ embed }}
+        </div>
+          <form method="POST">    
+                <input type="radio" accesskey="1" name="option" value="A"/>
+                <label for="A">A</label>
+                <input type="radio" accesskey="2" name="option" value="B" /> 
+                <label for="B">B</label>
+                <input type="radio" accesskey="3" name="option" value="C" /> 
+                <label for="C">C</label>
+                <input type="radio" accesskey="4" name="option" value="D" /> 
+                <label for="D">D</label>
+                <input type="radio" accesskey="5" name="option" value="F" /> 
+                <label for="F">F</label>
+              <br>
+        <input accesskey="s" type="submit" value="Submit">
+        </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block javascripts %}
+
+{% endblock javascripts %}

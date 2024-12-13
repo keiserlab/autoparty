@@ -1,0 +1,40 @@
+
+
+    <div class="sidebar">
+      <div class="sidebar-wrapper">
+        <ul class="nav">
+
+          {% if current_user.is_authenticated %}
+           <li>
+            <a href="{{ url_for('base_blueprint.docking_screens') }}">
+              <p>Load Screen</p>
+            </a>
+          </li>
+          <li>
+            <a href=" {{ url_for('base_blueprint.run_settings') }} ">
+              <p>Hitpicking</p>
+            </a>
+          </li>
+          <li>
+            <a href=" {{ url_for('base_blueprint.autoparty_info') }} ">
+              <p>Info</p>
+            </a>
+          </li>
+          <li>
+            <a href="{{ url_for('base_blueprint.logout') }}" >
+              <p>Logout</p>
+            </a>
+          </li>
+          {% else %}
+          <li>
+             
+            <a target=" {{ url_for('base_blueprint.login') }}" >
+              <p>Login</p>
+            </a>
+          </li>          
+          {% endif %}
+
+        </ul>
+        
+      </div>
+    </div>

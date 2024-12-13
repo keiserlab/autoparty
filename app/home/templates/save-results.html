@@ -1,0 +1,27 @@
+{% extends 'layouts/base-special-sidebar.html' %}
+
+{% block stylesheets %}
+
+{% endblock stylesheets %}
+
+{% block content %}
+
+<div class="row">
+      <div class="col-lg-8">
+
+            {{ df_html|safe }}
+          
+          <form method="POST">
+              <input class="btn btn-primary animation-on-hover" type="submit" name='save-and-exit' value = "Save and Exit"/>
+              <input class="btn btn-primary animation-on-hover" type="submit" name='resume' value = "Resume"/>
+          </form>
+
+      </div>
+</div>
+
+{% endblock content %}
+
+<!-- Specific JS goes HERE -->
+{% block javascripts %}
+
+{% endblock javascripts %}

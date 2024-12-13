@@ -1,0 +1,1164 @@
+{% extends 'layouts/base.html' %}
+
+{% block stylesheets %}
+  <style>
+
+    .mol-container {
+      width: 100%;
+      height: 600px;
+      position: relative;
+    }
+
+
+    #mol-list {
+      max-height: calc(100vh - 9rem);
+      background-color: #DDD; 
+      overflow-y: scroll;
+      bottom: 0;
+    }
+
+    .train-dashboard {
+      width:  96%;
+      height:  100%;
+      z-index:  9;
+      opacity:  0.97;
+      position:  absolute;
+    }
+
+    .down {
+      background-color: #808080;
+    }
+
+    .beta tbody tr:hover {
+    color: #fff;
+    background-color: #000;
+    }
+
+    .beta tbody tr:hover td {
+        background-color: transparent;
+    }
+
+    /* wasn't working if I changed it in the template for whatever reason */
+    .fixed-plugin {
+        all: revert;
+        position: relative;
+        right: 0;
+        width:  64px;
+        background: rgba(0, 0, 0, 0.3);
+        z-index: 1031;
+        border-radius: 8px 0 0 8px;
+        text-align: center;
+      }
+
+      .fixed-plugin .dropdown-menu {
+        left: 80px !important;
+        right: auto !important;
+        top: 0px !important;
+        width: auto;
+        border-radius: 0.1875rem;
+        padding: 0 10px;
+        background: linear-gradient(#222a42, #1d253b);
+      }
+
+      .fixed-plugin .dropdown-menu:after,
+      .fixed-plugin .dropdown-menu:before {
+        right: auto;
+        margin-left: auto;
+        left: auto;
+      }
+
+  </style>
+
+{% endblock stylesheets %}
+
+{% block content %}
+
+<script type="text/javascript" src="/static/assets/3Dmol/3Dmol-min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/nanobar/0.2.1/nanobar.min.js"></script>
+<script src='https://cdn.plot.ly/plotly-2.14.0.min.js'></script>
+
+
+<div id="top_navi_buttons" class="row"> <!-- Top buttons for navigation, never move -->
+     <div id="top-buttons" style="display: inline-block; margin-left: auto; margin-right: 0; float: right;">
+        <div class="btn-group">
+          <div class="dropdown">
+              <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"> Actions </button>
+                <div class="dropdown-menu dropdown-black">
+                    <button class="dropdown-item" onclick="handle_training(true);"/> Train new model </button>
+                    <button class="dropdown-item" onclick="download_results('predictions', true, extension='csv');"/> Save predictions </button>
+                    <button class="dropdown-item" onclick="upload_annotations();"/> Upload existing annotations </button>
+                    <button class="dropdown-item" onclick="download_results('toy_annotation', false, extension='csv'); "/> Annotation template </button>
+                </div>
+              </div>
+              </div>
+              <div class="btn-group">
+                <button class="btn btn-primary" onclick="show_training(true);"/> Training </button>
+              </div>
+        </div>
+</div>
+
+<div class="col-12" id="annotation-div">
+  <div class="row">
+    <div class="col-lg-9">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title" id="mol-title"></h3>
+          <h4 id='score'></h4>
+          <h4 id='mol-meta' style="display: none;"></h4>
+          <div id='mol-id' style="display: none;"></div>
+        </div>
+          <div class="card-body">
+              <row>
+               <div id="container-01" class="viewer_3Dmoljs mol-container"> 
+                <div class="fixed-plugin">
+              <div class="dropdown show-dropdown">
+                <a href="#" data-toggle="dropdown">
+                  <i class="fa fa-cog fa-2x"> </i>
+                </a>
+                <ul class="dropdown-menu" id="interaction-toggles"></ul>
+                </div>
+              </div>
+               </div>
+             </row>
+             <div id="select-panel">
+             <row>
+              <br>
+                 <fieldset class="form-field" name = "grade" id="grade">
+                  <table style="width:100%; text-align:center">
+                    <tbody>
+                    <tr>
+                    {% for subfield in gradeform.choice_switcher %}
+                        <td>{{ subfield }} &nbsp; {{subfield.label }} </td>
+                        {% endfor %}
+                    </tr>
+                  </tbody>
+                  </table>
+                  </fieldset>
+                </row>
+                <row>
+                  <div class = "btn-group card-footer">
+                    <button class="btn btn-primary animation-on-hover" onclick="back_mol();"/> <-- </button>
+                     <button class="btn btn-primary animation-on-hover" onclick="save_mol();"/> Submit </button>
+                     <button class="btn btn-primary" onclick="recenter_viewer();"/> Recenter </button>
+                     <button class="btn btn-primary animation-on-hover" onclick="forward_mol();"/> --> </button>
+                  </div>
+                </row>
+              </div>
+           </div>
+      </div>
+    </div>
+      
+    <div class="col-3">
+      <div class="row">
+         <div style="margin: 2%; width: 100%;">
+        <p> Mode: {{methodform.mode_switcher}} <a class="doculink" id="docu_swapmode" title="Swap between annotation mode and review mode."> (?) </a> </p>
+        </div>
+        <div style="margin: 2%; width: 100%;">
+        <p> Order by: {{methodform.method_switcher}} <a class="doculink" id="docu_swapmethod" title="Method used to sort molecules."> (?) </a>  </p>
+        </div>
+      </div>
+        <div class="form-group">
+          <input id="mol-search" type="text" class="form-control" placeholder="Search" onkeydown="search_mol(this)">
+        </div>
+        <table class="table beta" id="mol-table"></table>
+        <div>
+        <ul class="pagination" style="float:left; margin: 0">
+          <li class="page-item"><a class="page-link" onclick="update_molecule_list('first')">First</a></li>
+          <li class="page-item"><a class="page-link" onclick="update_molecule_list('prev')">Previous</a></li>
+          <li class="page-item"><a class="page-link" onclick="update_molecule_list('next')">Next</a></li> 
+          <li class="page-item"><a class="page-link" onclick="update_molecule_list('last')">Last</a></li> 
+        </ul>   
+        <div id="pagenum">&nbsp;0/0</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="col-12" id="model-dashboard" style="display:none">
+
+<div class="row">
+  <div class="col-lg-9">
+     <h3 class="card-title"> Model Dashboard </h3>
+  </div>
+  <div class="col-lg-3">
+    <div id="close-training" style="float: right;">
+      <button class="btn btn-primary" onclick="show_training(false);"/> Close </button>
+    </div>
+  </div>
+  </div>
+
+    <div class="row">
+      <div class="col-lg-6">
+        <div id='loss-curve'></div>
+        <div id="model-status"> No model found.</div>
+      </div>
+      <div class="col-lg-6">
+        <div id='party-history'></div>
+        <div id="history-status"> No history found.</div>
+      </div>
+    </div>
+    <div class="row">
+          <div id="progress-div" style="display:none;" class="col-lg-12">
+            Predicting: <div class="progress" id="progress_nanobar"></div>
+          </div>
+    </div>
+      <div class="row">
+        <div id='model-buttons' class="btn-group" style="display: none;">
+          <button class="btn btn-primary" onclick="download_results('results', true, extension='zip');"/> Party Results </button>
+          <button class="btn btn-primary" onclick="download_results('predictions', true, extension='csv');"/> Save Predictions </button>
+        </div>
+      </div>
+    </div>
+</div>
+
+{% endblock content %}
+
+<!-- Specific JS goes HERE -->
+{% block javascripts %}
+
+  <script>
+
+    const MAX_QUEUE_SIZE = 10
+    var hide_inters = Object();
+    
+    //interaction colors, used to populate sidebar
+    const interaction_colors = new Map();
+    var current_mol = new Object();
+    var mol_queue = new Array();
+
+    //set up mol queue,  create viewer, get first molecule
+    $(document).ready(function(){
+      set_links();
+      create_viewer();
+      populate_pallete(interaction_colors);
+
+      var method = document.getElementById('methodswitcher');
+      console.log(method.value)
+      method.onchange = function(){ swap_method(method.value);}
+
+      var mode = document.getElementById('modeswitcher');
+      mode.onchange = function(){ swap_mode(mode.value);}
+
+      sessionStorage.setItem("history", JSON.stringify([]));
+      sessionStorage.setItem("hist_idx", JSON.stringify(-1))
+
+      sessionStorage.setItem("training", JSON.stringify(false));
+      sessionStorage.setItem("allowTrain", JSON.stringify(false));
+
+      sessionStorage.setItem("method", method.value);
+      sessionStorage.setItem("mode", "annotate");
+
+      var grades = document.getElementsByName('choice_switcher');
+      var choices = [];
+      for (let i = 0; i < grades.length; i++){
+        choices.push(grades[i].value);
+      }
+
+      document.querySelector('#select-panel').addEventListener('keydown', (event) => {
+        var name = event.key;
+        var code = event.code;
+        if (choices.includes(name)){
+          grades[choices.indexOf(name)].checked = true;
+        } else if ( name === 'Enter'){
+          save_mol();
+        }
+      })
+
+      var progressbar = document.getElementById('progress_nanobar');
+
+      nanobar = new Nanobar({
+        id: "nanobar",
+        bg: '#44f',
+        target: progressbar
+      });
+      nanobar.go(0);
+
+      recover_curves();
+
+      swap_mode(mode.value, true);
+      //swap_method(method.value, true);
+    });
+
+    function set_links(){
+    var info_links = document.getElementsByClassName("doculink");
+    for ( var infolink in info_links){
+        i = info_links[infolink]
+        i.href = "/information#" + i.id;
+      }
+    }
+
+    function swap_method(new_method, recenter = false){
+      // how molecules are sorted
+      methods = document.getElementById('methodswitcher');
+
+      // check specific cases - don't allow score for review, or disagreement for annotation
+      if ( new_method === "disagreement" && sessionStorage.getItem("mode") === "annotate"){
+        alert("Unable to sort by disagreement in annotation mode");
+        new_method = 'score'; // force revert to score
+      } 
+        /* This function handles the method swapping logic, ie changing the saved state and 
+        checking if the new method is valid */
+        if (new_method !== "name"){
+          // set prev method here, deals with slight bug with changing method with a name active
+          sessionStorage.setItem("prev_method", new_method);
+          sessionStorage.setItem("name", "");
+          methods.value = new_method;
+        }
+        sessionStorage.setItem("method", new_method); // update current method
+        sessionStorage.setItem("mol_page", JSON.stringify(0)); // return to page 0
+
+        sessionStorage.setItem("nmolecules", 0);
+        sessionStorage.setItem("ngrades", 0);
+
+        console.log(sessionStorage)
+        //update_molecule_queue(); // populate backend queue
+        update_molecule_list(undefined, true, recenter)
+      };
+    
+
+    function swap_mode(new_mode, recenter = false){
+      // whether to include molecules that already have grades
+      sessionStorage.setItem("mode", new_mode);
+      
+      var now = new Date();
+      sessionStorage.setItem("modetime", now.toUTCString());
+
+      var method = sessionStorage.getItem("method");
+      swap_method(sessionStorage.getItem("method"), recenter);
+    }
+
+    function show_training(display_train){
+      var train_dashboard = document.getElementById("model-dashboard");
+      var annot_screen = document.getElementById("annotation-div");
+      if (display_train) {
+        train_dashboard.style.display = 'block'; //show training
+        annot_screen.style.display = 'none';
+      } else {
+        train_dashboard.style.display = 'none'; //don't show training
+        annot_screen.style.display = 'block';
+      }
+    };
+
+    function search_mol(ele){
+      if(event.key === "Enter"){
+        var new_method = "";
+        if (ele.value.length > 0){
+          sessionStorage.setItem("name", ele.value)
+          new_method = "name";
+        } else {
+          // clearing list, revert to previous method
+          new_method = sessionStorage.getItem("prev_method");
+        }
+        swap_method(new_method);
+      }
+    }
+
+    function populate_interactions(){
+      inter_list = document.getElementById("interaction-toggles")
+      button_list = "";
+      for(inter_type in cur_interactions){
+        button_color = hide_inters[inter_type] ? '#3a3b3c':interaction_colors.get(inter_type);
+        button_str = '<input type="button" style="background-color:' + button_color + ';color:black;display:block" value="' + inter_type + '" onclick="toggle_interactions(this)"/>'
+        button_list += button_str;
+      }
+      inter_list.innerHTML = button_list;
+    }
+
+    function toggle_interactions(inter_button){
+
+      var viewer = $3Dmol.viewers['container-01']
+
+      hide_inters[inter_button.value] = !hide_inters[inter_button.value]
+
+      //select new button color
+      inter_button.style.background = hide_inters[inter_button.value] ? '#3a3b3c':interaction_colors.get(inter_button.value);
+
+      //hide interactions
+      for (cyl in cur_interactions[inter_button.value]){
+        shape = cur_interactions[inter_button.value][cyl];
+        shape.hidden = hide_inters[inter_button.value]; //flip
+      }
+      viewer.render();
+    };
+        
+    //  modified from alexandre 
+    var PEPDESIGN = {
+
+        
+      set_interactions: function(viewer, prot_model, mol_model, interactions) {
+        cur_interactions = new Object();
+        for (i in interactions) {
+          interaction = interactions[i];
+          if (!(interaction['type'] in cur_interactions)){
+            cur_interactions[interaction["type"]] = [];
+          }
+          if (!(interaction["type"] in hide_inters)){
+            hide_inters[interaction["type"]] = false;
+          }
+          src_grp = interaction["src_grp"];
+          trgt_grp = interaction["trgt_grp"];
+            
+          src_coords = src_grp["centroid"]
+          if (src_grp["add_pseudo_group"] == true){
+
+            //new_pseudo_atm = [{elem: 'D', x: src_coords[0], y: src_coords[1], z: src_coords[2],
+            //  atom: src_grp["pseudo_group_name"], hetflag: true }]
+            //shub update - adding this on the molecule so it gets removed when the model changes + add to interaction array to remove when necessary + change to SphereShape, not atom so that same hiding logic as cylinders works
+            new_pseudo_atm = viewer.addSphere({center: {x: src_coords[0], y: src_coords[1], z: src_coords[2]},radius: 0.25, color: 'white', hidden: hide_inters[interaction["type"]]})
+
+            //viewer.addAtoms(new_pseudo_atm);
+            cur_interactions[interaction["type"]].push(new_pseudo_atm)
+
+            if (!src_grp["show_centroid"]){
+             new_pseudo_atm.hidden = true;
+            }
+          }
+
+          for (j in src_grp['compounds']) {
+            comp = src_grp['compounds'][j]
+            var sel = {
+              chain: comp["chain"],
+              resn: comp["name"],
+              resi: comp["number"]
+            }
+
+            // Set the insertion code if necessary
+            if ( comp["icode"] !== "" ) sel.icode = comp["icode"];
+              
+            comp["repr"] = "stick"
+            repr = {}
+            repr[comp["repr"]] = {}
+            viewer.addStyle(sel, repr);
+          }
+
+
+          for (j in trgt_grp['compounds']) {
+            comp = trgt_grp['compounds'][j]
+            var sel = {
+              chain: comp["chain"],
+              resn: comp["name"],
+              resi: comp["number"]
+            }
+            // Set the insertion code if necessary
+            if ( comp["icode"] !== "" ) sel.icode = comp["icode"];
+
+            repr = {}
+            repr[comp["repr"]] = {}
+            viewer.addStyle(sel, repr);
+          }
+
+          trgt_coords = trgt_grp["centroid"]
+          if (trgt_grp["add_pseudo_group"] == true){
+            new_pseudo_atm = viewer.addSphere({center: {x: trgt_coords[0], y: trgt_coords[1], z: trgt_coords[2]},radius: 0.25, color: 'white', hidden: hide_inters[interaction["type"]]})
+
+            //shub update - adding this on the molecule so it get's removed when the model changes
+            cur_interactions[interaction["type"]].push(new_pseudo_atm)
+            if (!trgt_grp["show_centroid"]){
+              new_pseudo_atm.hidden = true;
+              //viewer.setStyle({atom: trgt_grp["pseudo_group_name"]},{sphere: {radius: 0.25, color:"white", hidden: hide_inters[interaction["type"]]}});
+            }
+          }
+
+          new_cylinder = viewer.addCylinder({
+            start: {x: src_coords[0], y: src_coords[1], z: src_coords[2]},
+            end: {x: trgt_coords[0], y: trgt_coords[1], z: trgt_coords[2]}, 
+              fromCap: 1.5, 
+              toCap: 1.5,
+              radius: 0.08, 
+              color: interaction["color"].replace("#", "0x"), 
+              dashed: true,
+              hidden: hide_inters[interaction["type"]]
+          })
+
+          cur_interactions[interaction["type"]].push(new_cylinder)
+        }
+
+      }
+    };
+
+    //adds pdb to viewer
+    function create_viewer(){    
+      var viewer = $3Dmol.viewers['container-01'];
+      var prot_model = viewer.addModel(`{{pdb_file}}`, "pdb");
+   };
+
+   function recenter_viewer(){
+      var viewer = $3Dmol.viewers['container-01'];
+      viewer.zoomTo({model:-1}, 300)        
+   };
+
+  function retrain_and_update(){
+    get_mol(false, true)
+  };
+
+  function download_template(){
+    window.location.href = "/download?filename=toy_annotation.csv"
+  }
+
+   //clear existing mol and inters, replace with new
+   function update_viewer(mol, inters, recenter){
+      // get existing viewer
+      var viewer = $3Dmol.viewers['container-01']
+
+      // clear existing mol and inters
+      if (!recenter){
+        var mol_model = viewer.getModel(-1);
+        viewer.removeAllShapes()
+        viewer.removeModel(mol_model.getID())
+      }
+
+      //clear cartoon residues
+      prot_model = viewer.getModel(0);
+      prot_model.setStyle({},{line:{}});
+
+      // replace with new mol and inters
+      var mol_model = viewer.addModel(mol, "sdf");
+      mol_model.setStyle({},{stick:{colorscheme:"magentaCarbon"}});
+
+      var js_inters = JSON.parse(inters)
+      PEPDESIGN.set_interactions(viewer, prot_model, mol_model, js_inters);
+
+      populate_interactions();
+      // if this is the first molecule, we zoom to it
+      if (recenter) {
+        viewer.zoomTo({model:-1})
+      }
+
+      viewer.render();
+   }
+
+   function recover_curves(){
+      // used for plotting training curves of existing models, on model reload
+      // UPDATE: now also recovers history of model accuracy over time
+      $.getJSON('/recover-trained', function(data){
+        if (data['processed']){
+          var model_status = document.getElementById("model-status");
+          model_status.innerHTML = "Recovered previously trained model.";
+
+          var history_status = document.getElementById("history-status");
+          history_status.innerHTML = "Recovered party history.";
+          
+          plot_losses(data['training'], data['validation'], 'loss-curve',  data['epoch'], data['best_epoch']);
+          plot_losses([data['history']['Training']], data['history']['Validation'], 'party-history', data['history']['Training'].length, -1, history = true,
+            xticks=data['history']['Time']);
+          var model_buttons = document.getElementById("model-buttons");
+          model_buttons.style.display = "block";
+        }
+      })
+   }
+
+  function plot_losses(train_losses, validation, target_div, epoch, best_epoch, history = false, xticks = null){
+
+    var all_graph_data = [];
+
+    marker_shapes = Array(epoch).fill("circle");
+    marker_sizes = Array(epoch).fill(0);
+    
+    if (best_epoch > -1) {
+      // adds star to best epoch, if provided
+      marker_shapes[best_epoch] = "star"
+      marker_sizes[best_epoch] = 10;
+    } else {
+      // circle most recent
+      marker_sizes[epoch - 1] = 10;
+    }
+
+    if (history) {
+      // fix graph names, title
+      var title = "Party History";
+      var x_axis = "Iteration";
+      var title = "History";
+      var xaxis = { title: { text: x_axis},
+                   tickmode: "array",
+                   tickvals: [...Array(validation.length).keys()],
+                   ticktext: xticks,
+                   tickangle: -45 }
+    } else {
+      var title = "Model Training";
+      var x_axis = "Epoch";
+      var title = "Loss Curve";
+      if (train_losses.length > 0) {
+        var xticks = [...Array(train_losses[0].length).keys()]
+      }
+      var xaxis = { title: { text: x_axis}, tickmode: "auto"}
+    }
+
+    for ( var loss_values in train_losses){
+      if (!history) {
+        var label = "Member " + loss_values; 
+      } else {
+        var label = "Train Loss"
+      }
+
+      var graph_data = {
+        x: [...Array(train_losses[loss_values].length).keys()],
+        y: train_losses[loss_values],
+        type: 'scatter',
+        name: label,
+        mode: "lines+markers",
+        marker: {
+          size: marker_sizes,
+          symbol: marker_shapes
+        }
+      };
+      all_graph_data.push(graph_data)
+        
+      }
+
+      if (validation.length > 0) {
+        var graph_data = {
+          x: [...Array(validation.length).keys()],
+          y: validation,
+          type: 'scatter',
+          name: 'Validation',
+          mode: "lines+markers",
+          marker: {
+            size: marker_sizes,
+            symbol: marker_shapes
+          }
+        }
+        all_graph_data.push(graph_data)
+      }
+
+      var max_x = epoch + 0.5
+
+      if (!history) {
+        var x_axis = "Epoch";
+        var title = "Loss Curve";
+      } else {
+        var x_axis = "Iteration";
+        var title = "History";
+      }
+
+      var layout = {
+        title: { text: title },
+        font: {color: "white"},
+        linecolor: "white",
+        gridcolor: "white",
+        plot_bgcolor:"black",
+        paper_bgcolor:"#FFF3",
+        xaxis: xaxis,
+        yaxis: { title: {text: "Loss"}}
+      };
+
+      Plotly.react(target_div, all_graph_data, layout)
+  }
+
+  function update_train_progress(status_url, task_id){
+      full_url = status_url + "?task_id=" + task_id;
+      $.getJSON(full_url, function(data){
+        if (data['processed']){
+          // task is finished, delete and run predictions
+          $.getJSON(full_url + "&delete_id=1", function(data){
+            if (data['success']){
+              alert("Training finished!")
+
+               var model_status = document.getElementById("model-status");
+              model_status.innerHTML = "Training finished."; 
+              handle_predicting(task_id);
+            } else {
+              alert("Error: " + data['error'])
+            }
+          })
+        } else { 
+          if (data['state'] == "FAILURE") {
+            alert("Training failed! Check celery logs...");
+          } else { 
+            if (data['state'] == "TRAINING"){
+                //update graph
+                var model_status = document.getElementById("model-status");
+                model_status.innerHTML = "Training...";
+
+                var model_buttons = document.getElementById("model-buttons");
+                model_buttons.style.display = "none";
+ 
+                plot_losses(data['training'], data['validation'], 'loss-curve',  data['epoch'], data['best_epoch']);
+            }
+          
+            // call function again if state is pending or training (or retry)
+            setTimeout(function() { update_train_progress(status_url, task_id);},  500);}
+        }
+        });
+      }
+
+
+  function update_predict_progress(status_url, progressbar_div){
+    $.getJSON(status_url, function(data){
+
+     percent = parseInt((data['completed_count'] * 100) / data['total']);
+     nanobar.go(percent);
+
+      if (data["finished"]){
+        // we're done, delete task
+        $.getJSON(status_url + "&delete_id=1", function(data){
+          sessionStorage.setItem("training", JSON.stringify(false));
+            if (data["failed"]){
+              alert("Predictions failed, check celery logs...")
+            } else {
+              alert("Predictions finished - updating molecule list.")
+              $.getJSON("/prep-results", function(data){
+                if (data['processed']){
+
+                  plot_losses([data['history']['Training']], data['history']['Validation'], 'party-history', data['history']['Training'].length, -1, history = true,
+                    xticks=data['history']['Time']);
+                  var history_status = document.getElementById("history-status");
+                  history_status.innerHTML = "History updated.";
+
+                  var model_buttons = document.getElementById("model-buttons");
+                  model_buttons.style.display = "block";
+                  sessionStorage.setItem("training", JSON.stringify(false));
+                }
+              })
+              swap_method("uncertainty");
+            }
+          })
+          } else {
+
+            setTimeout(function() {
+                update_predict_progress(status_url, progressbar_div);}, 250);
+      }
+    });
+   }
+
+   function handle_predicting(task_id){
+    $.getJSON("/start-predict?task_id=" + task_id, function(data){
+        var progress_div = document.getElementById('progress-div');
+        var progressbar = document.getElementById('progress_nanobar');
+        progress_div.style.display = "block";
+
+        update_predict_progress("/taskstatus?screen_id=" + data['pred_task_id'], progressbar);
+    });
+  }
+
+    function download_results(name, result, extension = ""){
+      download_url = "/download?filename=" + name + "&extension=" + extension
+      if (result) {download_url = download_url + "&append=1"}
+      window.location.href = download_url;
+    };
+
+
+    function update_molecule_list(direction = undefined, show_first = false, recenter = false, page = undefined){
+      // Updates the user-visible molecule list, should NOT require any database reads unless queue is low
+
+      var str = sessionStorage.getItem("mol_page")
+      var current_page = JSON.parse(str)
+
+      if (page) {
+        current_page = page;
+        sessionStorage.setItem("mol_page", JSON.stringify(current_page));
+      } else {
+
+      if (typeof direction !== 'undefined'){
+          if (direction == "first"){ current_page = 0;}
+          else if (direction === "last"){ current_page = JSON.parse(sessionStorage.getItem("num_pages")) - 1}
+          else if (direction == "prev"){ current_page--;} 
+          else if (direction == "next"){ current_page++; }
+          
+          // check boundaries
+          current_page = Math.max(0, current_page);
+          if (sessionStorage.getItem("num_pages") !== null){
+           current_page = Math.min(current_page, JSON.parse(sessionStorage.getItem("num_pages")) - 1)
+          }
+          sessionStorage.setItem("mol_page", JSON.stringify(current_page));
+        }
+      }
+
+
+      //if (sessionStorage.getItem("nmolecules") - sessionStorage.getItem("ngrades") < 50){
+      //  console.log("Updating backend mol queue");
+      //  update_molecule_queue();
+      //}
+
+      console.log(sessionStorage.getItem("nmolecules"));
+
+      var info = new Object();
+      info.page = current_page;
+      info.method = sessionStorage.getItem("method");
+      info.mode = sessionStorage.getItem("mode");
+      info.name = sessionStorage.getItem("name");
+      info.modetime = sessionStorage.getItem("modetime");
+
+      $.ajax({
+        type: "POST",
+        url: "/get-mols",
+        data: JSON.stringify(info),
+        contentType: "application/json",
+        dataType: 'json', 
+        success: function(data){
+          // populate table with received data
+          console.log(data)
+          if (data['processed']) {
+          var mol_table = document.getElementById('mol-table');
+          var table_html = "<thead><th>Molecule</th><th>Score</th>";
+          if (data['grades']){
+            table_html += "<th>Grade</th>"
+          }
+          if (data['predictions']){
+            table_html += "<th>Pred</th>"
+          }
+          table_html += "</thead><tbody>";
+          var headers = ["name", "score"]
+          for (mol in data['molecules']){
+            molecule = data['molecules'][mol]
+            molecule_string = "<tr id=" + molecule['id'] + ' onclick="swap_mol(this.id)">'
+            for (h in headers){
+              molecule_string += "<td>" + molecule[headers[h]] + "</td>" 
+            }
+            if (data['grades']){
+              var grade_str = "";
+              if (data['grades'][mol]['grade']) {
+                grade_str = data['grades'][mol]['grade'];
+              }
+              molecule_string += "<td>" + grade_str + "</td>";
+            }
+            if (data['predictions']){
+              var pred_str = "";
+              if (data['predictions'][mol]['prediction']){
+                pred_str =  data['predictions'][mol]['prediction'];
+              }
+              molecule_string += "<td>" + pred_str + "</td>";
+            }
+            molecule_string += "</tr>"
+            table_html += molecule_string
+          }
+            table_html += "</tbody>"
+            mol_table.innerHTML = table_html;
+
+            // set page number
+            sessionStorage.setItem("num_pages", JSON.stringify(data['num_pages']))
+            var numpagediv = document.getElementById("pagenum")
+
+            numpagediv.innerHTML = "&nbsp;" + (current_page + 1) + "/" + data['num_pages']
+
+            if (show_first) { swap_mol(data['molecules'][0]['id'], recenter); }
+          } else {
+            //something went wrong - likely that there were no predictions to work off of
+            if (sessionStorage.getItem("name").length > 0){
+              alert("No molecules found matching requested name.");
+            } else {
+              alert("No molecules found - did you forget to train a model?");
+            }
+            swap_method('score');
+          }
+        }
+      })
+
+    }
+
+  function swap_mol(id, recenter = false){
+    var info = new Object;
+    info.id = id
+
+    $.ajax({
+      type: "POST",
+      url: "/get-mol",
+      data: JSON.stringify(info),
+      contentType: "application/json",
+      dataType: 'json', 
+      success: function(data){
+        if (data['processed']) {
+
+          document.getElementById('mol-title').innerHTML = "Molecule: " + data['mol']['name'];
+          document.getElementById('mol-id').innerHTML = data['mol']['id'];
+          document.getElementById('score').innerHTML = "Score: " + data['mol']['score'];
+            
+          // create metadata string, if applicable
+          let meta = data['mol']['meta']
+
+          if (meta !== undefined){
+            let metajson = JSON.parse(data['mol']['meta']);
+          let metastr = "";
+          for (let metascore in metajson) {
+              metastr += metascore + ": "+ metajson[metascore] + ", "
+          }
+
+          let metadiv = document.getElementById('mol-meta');
+          if (metastr.length > 0){
+              metastr = metastr.substring(0, metastr.length - 2);
+              let metadiv = document.getElementById('mol-meta');
+              metadiv.style.display = 'block';
+              metadiv.innerHTML = metastr;
+          }
+          else {
+              metadiv.style.display = 'none';
+          }  
+          
+          //update radio button to reflect if we got a grade
+            var grades = document.getElementsByName('choice_switcher');
+            //update radioform to reflect method
+            if (data['grade']){
+              var grade = data['grade']['grade'];
+            } else { grade = undefined }
+            for (let i = 0; i < grades.length; i++ ){
+              if (grades[i].value === grade ){
+                grades[i].checked = true;
+                break;
+              }  else { grades[i].checked = false;}
+          }
+         }
+
+          update_viewer(data['mol']['mol'], data['mol']['inters'], recenter);
+        }
+
+      }
+    })
+  }
+
+  function back_mol(){
+    const str = sessionStorage.getItem("history");
+    var history = JSON.parse(str);
+
+    if (history.length == 0){
+      alert("No molecules found in history.") 
+    } else {
+
+      var idx = JSON.parse(sessionStorage.getItem("hist_idx"))
+      idx++;
+      if (idx == history.length){
+        alert("No more molecules saved");
+        idx = history.length - 1;
+      } else {
+        var id = history[idx];
+        sessionStorage.setItem("hist_idx", JSON.stringify(idx))
+        swap_mol(id); 
+    }
+    }
+  };
+
+  function forward_mol(){
+    const str = sessionStorage.getItem("history");
+    var history = JSON.parse(str);
+
+    if (history.length == 0){
+      alert("No molecules found in history.") 
+    } else {
+      var idx = JSON.parse(sessionStorage.getItem("hist_idx"))
+      idx--;
+      if (idx <= -1){
+          alert("At latest molecule - returning to list")
+          sessionStorage.setItem("hist_idx", JSON.stringify(-1))
+          swap_method(sessionStorage.getItem("method"));
+        } else {
+          var id = history[idx];
+          sessionStorage.setItem("hist_idx", JSON.stringify(idx))
+          swap_mol(id);
+     }
+    }
+  };
+
+ function upload_annotations() {
+      var input = document.createElement('input');
+      input.type = 'file';
+
+      input.onchange = e => { 
+         var file = e.target.files[0]; 
+         let formData = new FormData();
+         formData.append("annotations", file)
+
+         fetch('process-annotations', {
+          method: 'POST',
+          body: formData
+         }).then(response => response.json())  
+          .then(json => {
+            console.log(json)
+            message = ''
+            if (!json['processed']){
+
+              message += 'Errors: '
+
+              if (json['success_annotations'] != json['total_annotations']){
+                message += json['total_annotations'] + ' attempted, ' + json['success_annotations'] + ' successful.\n';
+              }
+
+              if (json['duplicates'].length > 0){
+                message += json['duplicates'].length + ' duplicate(s): ' + json['duplicates'].slice(0, 5) + '.\n';
+              }
+
+              if (json['unused'].length > 0){
+                message += json['unused'].length + ' unused annotation(s): ' + json['unused'].slice(0, 5)  + '\n';
+              }
+
+              if (json['illegal'].length > 0){
+                message += json['illegal'].length + ' provided grade(s) not in party options: ' + json['illegal'].slice(0,5) + '\n';
+              }
+
+              message += json['success_annotations'] + ' added successfully.'
+
+              alert(message);
+
+            } else { 
+                   alert("All annotations uploaded successfully!") 
+            }
+
+            if (json['success_annotations'] > 0){
+              sessionStorage.setItem("allowTrain", JSON.stringify(true)); // allow training, assume annotations were added
+              update_molecule_list(undefined, true);
+            }
+        })  
+      }
+
+      input.click();
+  };
+
+  function update_molecule_history(id){
+        const str = sessionStorage.getItem("history");
+        var history = JSON.parse(str);
+        var hist_idx = JSON.parse(sessionStorage.getItem("hist_idx"));
+
+        // if the molecule we're saving isn't in our history, add it
+        var return_to_list = !history.includes(id);
+
+        if (return_to_list) {
+          if (history.length < MAX_QUEUE_SIZE ) {
+            history = [id].concat(history)
+          } else {
+            history = [id].concat(history.slice(0, history.length - 1));
+          }
+
+          const jsonHistory = JSON.stringify(history);
+          sessionStorage.setItem("history", jsonHistory);
+        }
+
+        return return_to_list;
+    }
+
+ 
+    function handle_training(force = false){
+      // handles starting training when requested
+      if (force && JSON.parse(sessionStorage.getItem("training"))){
+        alert("Already training a model.")
+      } else if (force && !JSON.parse(sessionStorage.getItem("allowTrain"))) {
+        alert("Must annotate additional molecules before training a new model.")
+      }
+      else {
+      train_url = "/check-train";
+      if (force) { train_url += "?force=1"}
+      $.getJSON(train_url, function(data){
+            if (data['train']){
+              alert("Starting training")
+              sessionStorage.setItem("training", JSON.stringify(true));
+              var progress_div = document.getElementById('progress-div');
+              progress_div.style.display = "none";
+              nanobar.go(0);
+
+               $.getJSON("/start-train", function(data){
+                  task_id = data['task_id'];
+                  status_url = "/taskstatus";
+                  update_train_progress(status_url, task_id)       
+                })
+            }
+        })
+      }
+    }
+
+
+    //sends mol and grade info to backend to be saved to database
+    function save_mol() {
+
+      var id = document.getElementById('mol-id').innerText;
+      var grades = document.getElementsByName('choice_switcher');
+
+      //get checked grade from radio form
+      for (let i = 0; i < grades.length; i++ ){
+        if (grades[i].checked){ var grade = grades[i].value; break; }
+      }
+
+      //alert the user if they're trying to save null grades
+      if (typeof grade == 'undefined'){
+        alert("Please assign a grade to save annotation!");
+      } else {
+
+        var mol_data = new Object();
+        mol_data.name = name;
+        mol_data.id = id;
+        mol_data.grade = grade;
+
+        return_to_list = update_molecule_history(id);
+
+        //update accuracy so far, if predictions are available
+        if (sessionStorage.getItem("new_annotations") !== null) {
+          sessionStorage.setItem("new_annotations", JSON.stringify(JSON.parse(sessionStorage.getItem("new_annotations")) + 1));
+
+          //check prediction/annotation agreement
+          pred_str = document.getElementById("score").innerHTML;
+          pred = pred_str[pred_str.length - 1].toLowerCase();
+
+          if (pred == grade) { // increase agreement
+            sessionStorage.setItem("agree_annotations", JSON.stringify(JSON.parse(sessionStorage.getItem("agree_annotations")) + 1));
+          }
+          agreement = JSON.parse(sessionStorage.getItem("agree_annotations")) * 100 / JSON.parse(sessionStorage.getItem("new_annotations"))
+          document.getElementById("model-agreement").innerHTML = "Agreement: " + parseInt(agreement).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + "%"
+        }
+
+        $.ajax({
+          type: "POST",
+          url: "/save-grade",
+          data: JSON.stringify(mol_data),
+          contentType: "application/json",
+          dataType: 'json', 
+          success: function(data){
+            sessionStorage.setItem("allowTrain", JSON.stringify(true));
+            handle_training();
+            if (return_to_list){
+              // pop next id from queue
+              update_molecule_list(undefined, true);
+            } else {
+              forward_mol();
+            }
+          }
+        });
+        
+      }
+    }
+    
+    function populate_pallete(colormap){
+      colormap.set("Proximal", "rgb(153, 153, 153)");
+      colormap.set("Hydrogen bond", "rgb(76, 76, 255)");
+      colormap.set("Water-bridged hydrogen bond", "rgb(191, 191, 255)");
+      colormap.set("Weak hydrogen bond", "rgb(102, 178, 178)");
+      colormap.set("Ionic", "rgb(0, 255, 0)");
+      colormap.set("Salt bridge", "rgb(51, 153, 51)");
+      colormap.set("Cation-pi", "rgb(255, 153, 153)");
+      colormap.set("Amide-aromatic stacking", "rgb(178, 76, 102)");
+      colormap.set("Hydrophobic", "rgb(255, 127, 0)");
+      colormap.set("Halogen bond", "rgb(127, 255, 255)");
+      colormap.set("Halogen-pi", "rgb(127, 255, 255)");
+      colormap.set("Chalcogen bond", "rgb(255, 204, 127)");
+      colormap.set("Chalcogen-pi", "rgb(255, 204, 127)");
+      colormap.set("Repulsive", "rgb(140, 63, 153)");
+      colormap.set("Covalent bond", "rgb(0, 0, 0)");
+      colormap.set("Atom overlap", "rgb(102, 102, 102)");
+      colormap.set("Van der Waals clash", "rgb(229, 229, 229)");
+      colormap.set("Van der Waals", "rgb(127, 127, 127)");
+      colormap.set("Orthogonal multipolar", "rgb(255, 255, 127)");
+      colormap.set("Parallel multipolar", "rgb(255, 255, 127)");
+      colormap.set("Antiparallel multipolar", "rgb(255, 255, 127)");
+      colormap.set("Tilted multipolar", "rgb(255, 255, 127)");
+      colormap.set("Multipolar", "rgb(255, 255, 127)");
+      colormap.set("Unfavorable nucleophile-nucleophile", "rgb(178, 127, 127)");
+      colormap.set("Unfavorable electrophile-electrophile", "rgb(178, 127, 127)");
+      colormap.set("Cation-nucleophile", "rgb(165, 229, 165)");
+      colormap.set("Anion-electrophile", "rgb(165, 229, 165)");
+      colormap.set("Unfavorable anion-nucleophile", "rgb(178, 127, 127)");
+      colormap.set("Unfavorable cation-electrophile", "rgb(178, 127, 127)");
+      colormap.set("Pi-stacking", "rgb(255, 51, 51)");
+      colormap.set("Face-to-face pi-stacking", "rgb(255, 51, 51)");
+      colormap.set("Face-to-edge pi-stacking", "rgb(255, 51, 51)");
+      colormap.set("Face-to-slope pi-stacking", "rgb(255, 51, 51)");
+      colormap.set("Edge-to-edge pi-stacking", "rgb(255, 51, 51)");
+      colormap.set("Edge-to-face pi-stacking", "rgb(255, 51, 51)");
+      colormap.set("Edge-to-slope pi-stacking", "rgb(255, 51, 51)");
+      colormap.set("Displaced face-to-face pi-stacking", "rgb(255, 51, 51)");
+      colormap.set("Displaced face-to-edge pi-stacking", "rgb(255, 51, 51)");
+      colormap.set("Displaced face-to-slope pi-stacking", "rgb(255, 51, 51)");
+      colormap.set("Single bond", "rgb(0, 0, 0)");
+      colormap.set("Double bond", "rgb(0, 0, 0)");
+      colormap.set("Triple bond", "rgb(0, 0, 0)");
+      colormap.set("Aromatic bond", "rgb(0, 0, 0)");
+      colormap.set("Other bond", "rgb(0, 0, 0)");
+    }
+
+  </script>
+
+{% endblock javascripts %}

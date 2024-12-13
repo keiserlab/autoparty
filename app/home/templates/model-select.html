@@ -1,0 +1,63 @@
+{% extends 'layouts/base.html' %}
+
+{% block stylesheets %}
+  <style>
+    .mol-container {
+      width: 80%;
+      height: 600px;
+      position: relative;
+    }
+  </style>
+
+{% endblock stylesheets %}
+
+{% block content %}
+
+<script type="text/javascript" src="/static/assets/3Dmol/3Dmol-min.js"></script>
+
+<div class="row">
+  <div class="col-xl-12">
+    <div class="card">
+      <form method="POST">
+          <fieldset class="form-field">
+              <p> Hidden Layers </p>
+                {% for subfield in form.hidden_layers %}
+                <tr>
+                    <td>{{ subfield }}</td>
+                    <td>{{ subfield.label }}</td>
+                </tr>
+                {% endfor %}
+              <p> Neurons </p>
+               {% for subfield in form.num_neurons %}
+                <tr>
+                    <td>{{ subfield }}</td>
+                    <td>{{ subfield.label }}</td>
+                </tr>
+                {% endfor %}
+              <p> Learning Rate </p>
+               {% for subfield in form.learning_rate %}
+                <tr>
+                    <td>{{ subfield }}</td>
+                    <td>{{ subfield.label }}</td>
+                </tr>
+                {% endfor %}
+              <p> Uncertainty </p>
+               {% for subfield in form.uncertainty_method %}
+                <tr>
+                    <td>{{ subfield }}</td>
+                    <td>{{ subfield.label }}</td>
+                </tr>
+                {% endfor %}
+          </fieldset>
+          <input type="submit">
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock content %}
+
+<!-- Specific JS goes HERE -->
+{% block javascripts %}
+
+{% endblock javascripts %}

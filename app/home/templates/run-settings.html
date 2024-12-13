@@ -1,0 +1,110 @@
+{% extends 'layouts/base.html' %}
+
+{% block stylesheets %}
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+{% endblock stylesheets %}
+
+{% block content %}
+
+<script type="text/javascript" src="/static/assets/3Dmol/3Dmol-min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+<div class="row">
+    
+  <div class="col-md-12">
+    <div class="card " height = 300px >
+      <div class="card-header">
+        <h4 class="card-title"> Hitpicking Party Settings </h4>
+      </div>
+        <div class="card-body">
+              <p> Begin new party </p>
+
+              <form id="new-party" role="form" method="post" action="">
+                <p>
+              {{ form.preloaded_id.label }} <a class="doculink" id="docu_newparty" title="Select existing screen for new party."> (?) </a>
+              {{ form.preloaded_id }}
+                </p>              
+
+              <p>
+               {{ form.party_config.label }} <a class="doculink" id="docu_partyconfig" title="Configuraion file for new party."> (?) </a>
+               {{ form.party_config() }}
+             </p>
+
+              <input class="btn btn-primary animation-on-hover" type="button" name="new-party" onclick="check_success('new-party');" value="Start" id="start-new-button"> </input>
+              <input class="btn btn-primary animation-on-hover" type="button" name="download_default" onclick="download_defaults();" value="Download Default" id="download-defaults"> </input>
+          </form>
+
+              <p> OR Resume Existing Party </p>
+
+          <form id="resume-party" role="form" method="post" action="">
+              <p> 
+                {{ form.hp_settings_id.label }} <a class="doculink" id="docu_resumeparty" title="Resume where you left off from an existing party."> (?) </a>
+                {{ form.hp_settings_id }}
+              </p>
+          
+                <input class="btn btn-primary animation-on-hover" type="button" name="resume-party" onclick="check_success('resume-party');" value="Resume" id="resume-button"> </input>
+                </div>
+          </form>
+      </div>
+    </div>
+  </div>
+
+{% endblock content %}
+
+<!-- Specific JS goes HERE -->
+{% block javascripts %}
+
+<script>
+
+  $(document).ready(function(){
+     set_links()
+    })
+
+  function set_links(){
+    var info_links = document.getElementsByClassName("doculink");
+    for ( var infolink in info_links){
+        i = info_links[infolink]
+        i.href = "/information#" + i.id;
+        console.log(infolink);
+        console.log(info_links[infolink]);
+    }
+}
+
+
+function download_defaults(){
+    window.location.href = "/download?filename=party_default.conf"
+}
+
+function check_success(run_type){
+  console.log(run_type);
+  form = document.getElementById(run_type);
+  var formData = new FormData(form);
+  formData.append(run_type, '');
+
+   $.ajax({
+        type: "POST",
+        url: "/run-settings",
+        data: formData, 
+        processData: false,
+        contentType: false,
+        success: function(data){
+            if (!data['processed']){
+                alert_str = "Processing failed: " 
+                for(reason in data['reasons']){
+                    alert_str += "\n" + data['reasons'][reason]
+                }
+                alert(alert_str)
+            } else {
+              // everything is ok, redirect to label_mols
+              location.replace("/hp-in-progress");
+            }
+        }
+     })
+
+}
+
+</script>
+
+{% endblock javascripts %}

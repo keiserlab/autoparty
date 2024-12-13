@@ -1,0 +1,210 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} Docking Runs {% endblock %} 
+
+{% block stylesheets %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+{% endblock stylesheets %}
+
+{% block content %}
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/nanobar/0.2.1/nanobar.min.js"></script>
+
+<style>
+</style>
+
+<div class="row">    
+  <div class="col-md-12">
+    <div class="card">
+        <form role="form" method="post" action="">
+            <div class="card-header">
+            <h3 class="title">Load New Screen</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8 px-md-1">
+                        <div class="form-group">
+                          <label>Name of New Screen</label> <a class="doculink" id="docu_screenname" title="Name of new screen in the database."> (?) </a>
+                          <input class="form-control" id="p_name" name="runname" required="" type="text" value="">
+                    </div>
+
+                        <p> 
+                            {{ form.existing_screens.label }} <a class="doculink" id="docu_append" title="Name of existing screen to append molecules to, if applicable."> (?) </a>
+                            {{ form.existing_screens }}
+                        </p>
+                    </div>
+
+                </div>
+
+                <div class='card-header'>
+                <h4> Screen Files </h4> </div>
+                <div class="row">
+                    <div class="col-md-8 px-md-1">
+                        <div>
+                            <label for="mollist_remove">Molecule File/Directory (sdf/sdf.gz or mol2 file)</label>
+                            <a class="doculink" id="docu_molfile" title="Path to sdf or sdf.gz file containing molecules from screen. Provided path should be relative to /inputs/ directory."> (?) </a>
+                            <input class="form-control" id="mollist_remote" name="mollist_remote" required="" type="text" value="">
+                        </div>
+                    </div>
+                 </div>
+                 <div class="row">
+                    <div class="col-md-8 px-md-1">
+                        <div>
+                            <label for="recpdb_remote">Receptor PDB File</label>
+                            <a class="doculink" id="docu_pdbfile" title="Path to pdb file receptor for the screen. Provided path should be relative to /inputs/ directory."> (?) </a>
+                            <input class="form-control" id="recpdb_remote" name="recpdb_remote" required="" type="text" value="">
+                        </div>
+                    </div>
+                 </div>
+                <div class="row">
+                    <div class="col-md-8 px-md-1">
+                        <div>
+                            <label for="score_remote">Score Label</label>
+                            <a class="doculink" id="docu_scorelabel" title="Name of score in the provided molecule file, for example 'minimizedAffinity'. This is what the molecules will be sorted by, prior to any model training."> (?) </a>
+                            <input class="form-control" id="score_remote" name="score_remote" required="" type="text" value="">
+                        </div>
+                    </div>
+                 </div>
+                <div class = "row">
+                    <div class = "col-md-8 px-md-1">
+                        <div>
+                            <label for="luna_config">LUNA Configuration File(s) </label>
+                            <a class="doculink" id="docu_lunaconfig" title="LUNA configuration files used for interaction/fingerprint calculation. For a detailed explanation of the options + required naming schemes, see the information tab."> (?) </a>
+                            <input class="form-control" id="luna_config" name="luna_config" type="file" value="" multiple />
+                        </div>
+                    </div>
+                </div>
+
+
+                <div id="progress-div" style="display:none; width: 100;">
+                    <div class="progress" id="progress_nanobar"></div>
+                </div>
+                
+
+                  <input class="btn btn-primary animation-on-hover" type="button" name="load_new" onclick="load_remote();" value="Load Screen" id="load-remote-button"> </input>
+
+                  <input class="btn btn-primary animation-on-hover" type="button" name="download_default" onclick="download();" value="Download Defaults" id="download-defaults"> </input>
+                
+             </form>
+        </div>
+</div>
+</div>
+
+
+{% endblock content %}
+
+
+{% block javascripts %}
+
+<script>
+
+$(document).ready(function(){
+     set_links()
+     //check_loading();
+    })
+
+
+function set_links(){
+    var info_links = document.getElementsByClassName("doculink");
+    for ( var infolink in info_links){
+        i = info_links[infolink]
+        i.href = "/information#" + i.id;
+    }
+}
+
+function start_calculations(task_id){
+  var progress_div = document.getElementById('progress-div');
+  var progressbar = document.getElementById('progress_nanobar');
+  progress_div.style.display = "block";
+
+  var nanobar = new Nanobar({
+    bg: '#44f',
+    target: progressbar
+  });
+
+  status_url = '/taskstatus?screen_id=' + task_id
+
+  $.ajax({
+    type: 'GET',
+    url: status_url,
+    success: function(data, status, request){
+        update_progress(status_url, nanobar, progressbar);
+    },
+    error: function() {
+      alert('Unexpected error');
+    }
+  });
+}
+
+function update_progress(status_url, nanobar, pb_div){
+  $.getJSON(status_url, function(data){
+    percent = parseInt((data['completed_count'] * 100) / data['total']);
+    nanobar.go(percent);
+
+    if (data['finished']){
+        pb_div.style.display = "none";
+        // we're done, delete task
+        $.getJSON(status_url + "&delete_id=1", function(data){
+            alert("Calculations finished.")
+        })
+    } else {
+        setTimeout(function() {
+        update_progress(status_url, nanobar, pb_div);}, 500);
+      }
+  });
+}
+
+
+function load_remote(){
+    // error check - assert both files exist and are accessible
+    let screenname = document.getElementById('p_name').value;
+    let prevscreen = document.getElementById('prevscreens').value;
+    let mollist = document.getElementById('mollist_remote').value;
+    let recpdb = document.getElementById('recpdb_remote').value;
+    let scorelabel = document.getElementById('score_remote').value;
+    let lunaconfig = document.getElementById('luna_config').files;
+
+    console.log(prevscreen);
+
+    let formData = new FormData();
+    formData.append("runname", screenname);
+    formData.append("prevscreen", prevscreen);
+    formData.append("mollist", mollist);
+    formData.append("recpdb", recpdb);
+    formData.append("scorelabel", scorelabel);
+
+    for( i = 0 ; i < lunaconfig.length; i++ ){
+        formData.append("lunaconfig", lunaconfig[i]);
+    }
+
+    $.ajax({
+        type: "POST",
+        url: "/load-remote",
+        data: formData, 
+        processData: false,
+        contentType: false,
+        //contentType: "application/json",
+        //dataType: 'json',
+        success: function(data){
+            if (!data['processed']){
+                alert_str = "Processing failed: " 
+                for(reason in data['reasons']){
+                    alert_str += " " + data['reasons'][reason]
+                }
+                alert(alert_str)
+            } else {
+                start_calculations(data['mol_calc_id'])
+            }
+        }
+     })
+}
+
+function download(){
+    window.location.href = "/download?filename=luna_default&extension=zip"
+}
+
+</script>
+
+{% endblock javascripts %}

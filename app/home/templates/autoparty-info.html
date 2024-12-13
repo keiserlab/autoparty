@@ -1,0 +1,197 @@
+{% extends "layouts/base.html" %}
+
+{% block title %} Information {% endblock %} 
+
+<!-- Specific Page CSS goes HERE  -->
+{% block stylesheets %} 
+<style>
+    .scoreExample {
+        content:url("/static/assets/img/docu_score.png");
+    }
+
+    .hppInProgress {
+    content:url("/static/assets/img/party-in-progress.png");
+    }
+
+    .trainingCurves {
+    content:url("/static/assets/img/training-curves.png");
+    }
+
+</style>
+{% endblock stylesheets %}
+
+{% block content %}
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <h3 class="card-title" id="newscreen"> Uploading a screen </h3>
+                    <p>
+                    <h5 id="docu_screenname">
+                        <b> Name of new screen </b> - This is a user-provided name to distinguish between screens when starting or resuming hitpicking parties. 
+                    </h5> 
+
+                    <h5 id="docu_append">
+                        <b> Existing Screens </b> - These are the screens that the user has previously uploaded. When appending to an existing screen, the only accepted inputs are the molecule file and the name of the score within that file. For consistency across interaction/fingerprint generation, other inputs (protein, LUNA config) are loaded from the files initially provided when that screen was created. Providing these files again will throw an error. 
+                    </h5>
+
+                     <h5 id="docu_molfile">
+                        <b> Molecule File </b> - This should be the path to the molecule file (either sdf or sdf.gz) for the screen, relative to the Autoparty /inputs directory.
+                    </h5>
+
+                    <h5 id="docu_pdbfile">
+                        <b> Receptor File </b> - This should be the path to the protein file (pdb) for the screen, relative to the Autoparty /inputs directory.
+                    </h5>
+
+                    <h5 id="docu_scorelabel">
+                        <b> Score Label </b> - The name of the score in the provided molecules file. For example, in the following sdf file the score is "minimizedAffinity":
+                        <img class="scoreExample" alt="Example Score">
+                    </h5>
+
+                    <h5 id="docu_lunaconfig">
+                        <b> LUNA Configuration Files </b> - The configuration files that will be used by LUNA when calculating intermolecular interactions and interaction fingerprints. There are 5 possible files, and Autoparty will use the names of the provided files to parse them. The available files are:
+                        <ul>
+                        <li>Overall config (luna.cfg): Fingerprint settings, such as the type of fingerprint (extended vs functional), the langth of the fingerprints, the pH to calculate interactions at, and whether to use bit or count fingerprints. Default recommended settings: 4096-element count EIFP fingerprints, 2 steps at radius 5.73.</li>
+                        <li>Atom Definition File (.fdef): Definition file for atomic properties, used during interaction calculation. NOT recommended to change. </li>
+                        <li>Interaction Config File (inter.cfg): Interaction configuration file, containing the various geometric and chemical constraints used by LUNA to define intermolecular interactions. </li>
+                        <li>Filter Config File (filter.cfg): Filter configuration file, used by LUNA to determine relevant interactions. The default value is a protein-ligand interaction filter that ignores self-interactions. </li>
+                        <li>Binding Config File (bind.cfg): Binding configuration file, further allowing pruning of specific interactions by type to only include specific residues or atoms. The default is that all interactions and interaction types are accepted.</li>
+                    </ul>
+
+                    Providing these files is entirely optional and the default files are available for download. For further information, please see the <a href="https://luna-toolkit.readthedocs.io/en/latest/">LUNA documentation</a>.
+                    </h5>
+                </div>
+
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <h3 class="card-title" id="party-settings"> Autoparty Settings </h3>
+                    <p>
+                    <h5 id="docu_newparty">
+                        <b> Start new hitpicking party </b> - Select from the list of uploaded screens. 
+                    </h5> 
+
+                    <h5 id="docu_partyconfig">
+                        <b> Party Configuration File </b> - The user-provided settings for the party. This file has two sections: one for overall settings, and one for model-specific settings. Configurable options are:
+                        <ul>
+                        <li> Model </li>
+                        <ul>
+                            <li>learning_rate: learning rate for training, defaule is 1e-4</li>
+                            <li>n_neurons: number of neurons in each layer or the network, default is 1024</li>
+                            <li>hidden_layers: number of hidden layers in the network, default is 1024</li>
+                            <li>weight_decay: weight decay for training (penalty for large weights), default is 1e-2
+                            <li>dropout: dropout proportion during training, default is 0.2</li>
+                            <li>output_options: possible classifications for each molecule provided as a comma-delineated list, default is "a,b,c,d,f"</li>
+                            <li>output_type: either "ordinal" or "classes". Ordinal means that the order of the labels matters, and will penalize the model more for more distant predictions. Classes means there is no ordering between the provided labels. Default is ordinal. <b>NOTE:</b> 'Classes' is not yet implemented, and currently disallowed.</li>
+                            <li>uncertainty_method: Method by which to estimate confidence in model predictions, used to select compounds to present to the user following model training. Currently only "ensemble" is implemented, but in the future we would like to allow other methods. </li>
+                            <li>retrain_frequency: how many molecules to wait before training a new model and updating the molecule list, default 200 </li>
+                            <li>max_epochs: how many epochs to train if early stopping doesn't trigger (or if there is no validaion set), default 100</li>
+                            <li>patience: number of epochs to wait for the validation loss to decrase before triggering early stopping</li>
+                        </ul>
+                        <li>Ensemble: method-specific settings</li> 
+                        <ul>
+                            <li>committee_size: number of members to use during committee uncertainty estimation, default is 3</li>
+                            <li>data_split: sampling method to use to split data across committee members, either 'bootstrap' to bootstrap sample from the dataset or 'full_split' to split data equally, default is 'bootstrap'.</li>
+                        </ul>
+                    </ul>
+                    </h5>
+
+                     <h5 id="docu_resumeparty">
+                        <b> Resume existing hitpicking party </b> - This loads an existing party from the database, along with the model history, predictions, and the loss curves for the most recently trained model if applicable.
+                    </h5> 
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <h3 class="card-title" id="active-party"> Active Party </h3>
+                    <img class="hppInProgress" alt="Party In Progress">
+
+                    <h5 id="docu_molinfo">
+                        <b> 1. Molecule Information </b> - Information for the current molecule, including the name, score, and any provided meta information (see Upload Existing Annotations)
+                    </h5> 
+
+                    <h5 id="docu_molpanel">
+                        <b> 2. Molecule Display </b> - Visualization of current molecule and calculated interactions. Can be rotated, moved, zoomed into, etc.
+                    </h5> 
+
+                    <h5 id="docu_intertoggle">
+                        <b> 3. Interaction toggle </b> - Shows the types of interactions present in the current molecule, and allows the user to determine which interactions they would like to show and which they would like to hide.
+                    </h5>
+
+                    <h5 id="docu_gradepanel">
+                        <b> 4. Grade Panel </b> - Potential choices of grade for the molecule, provided by the user in the party configuration. This also includes the Submit button which saves the grade to the database, the Recenter button which recenters the molecule viewer on the ligand, and the forward and back buttons. Up to ten molecules are maintained in the history.
+                    </h5>
+
+                    <h5 id="docu_settings">
+                        <b> 5. Actions and Settings </b> 
+                    </h5>
+
+                    <ul>
+                        <li> <h5 is="docu_actions"> <b> Actions </b> - There are four actions that can be triggered from this tab:
+                            <ul>
+                                <li> <i>Train new model</i> - begins model training. This is only available if there is at least one new annotation since the last time a model was trained. </li>
+                                <li> <i> Save predictions </i> - save the csv file containing grades and predictions for the run, if predictions exist. </li>
+                                <li> <i> Upload existing annotations </i> - expects a csv file with a column 'name' containing the molecule name and either/or 1) a 'grade' column containing the grade for each molecule, 2) "meta_" columns containing additional data about the molecule, displayed as part of the molecule info during annotation. </li>
+                                <li> <i> Annotation template </i> - download example CSV file containing the correct column naming </li> 
+                            </ul>
+                        </h5> </li>
+
+                        <li> <h5> <b> Training </b> - Toggles the model training panel - see <a href="#docu_modeltraining">Model Training</a> for more details.</h5> </li>
+
+                        <li>
+                    <h5 id="docu_modeswitch">
+                        <b> Switch modes </b> - There are two available modes, 'annotate' and 'review'. In annotation mode, only molecules that do not already have a grade will be shown. In 'review' mode, all molecules that have not received a new grade since review mode was selected will be shown.
+                    </h5> 
+                    </li>
+
+                    <li>
+                      <h5 id="docu_methodswitch">
+                        <b> Switch sorting methods </b> - Change the method by which molecules are selected and shown. There are currently 4 available methods:
+                        <ul>
+                            <li> Score - sorted by the score provided when the screen was uploaded, ascending. This is the default scoring method when starting a new party. </li>
+                            <li> Uncertainty - sort by model uncertainty, descending. These are the molecules that are deemed most useful to show to the user during the active learning loop. This method becomes available following model training.</li>
+                            <li> Prediction - sort by model prediction, descending. This method becomes available following model training.</li>
+                            <li> Disagreement - sort by difference between molecule grade and model prediction, descending. This method becomes available following model training and is only available in review mode.</li>
+                        </ul>
+                    </h5> 
+                </li>
+
+                <li>
+                    <h5 id="docu_sort"><b>Search</b> - search for a specific molecule by name. This queries all molecules, regardless of mode. </h5>
+                </li>
+                </ul>
+
+                <h3 class="card-title" id="docu_modeltraining"> Model Training </h3>
+                    <img class="trainingCurves" alt="Party In Progress">
+                    <h5>
+                    <ul>
+                        <li> <b> Loss Curve </b> - The loss curve for the most recently trained molecule. </li>
+                        <li> <b> Party History </b> - Shows the training loss and validation loss (if applicable) for the models trained during this party. If not validation was performed, the validation curve will be -1. </li>
+                        <li> <b> Results </b> - Outputs from Autoparty
+                            <ul>
+                                <li>Party Results - a zip file containing:
+                                <ul> 
+                                    <li> Model weights for all committee members </li>
+                                    <li> Training loss curve values </li>
+                                    <li> Validation loss curve values </li>
+                                    <li> Prediction CSV file, drescribed below </li>
+                                    <li> Any non-default LUNA or party configuration files. </li>
+                                </ul>
+                            </li>
+                                <li>Save Predictions - Download CSV with the columns: molecule id, molecule name, score, grade, smiles, prediction, uncertainty, </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </h5>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+{% endblock content %}
+
+<!-- Specific Page JS goes HERE  -->
+{% block javascripts %}{% endblock javascripts %}
