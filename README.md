@@ -11,9 +11,17 @@ Autoparty is a Python-based application developed to assist scientists in analyz
 
 To run from the singlularity container:
 
-TBD
+1. Download the redis and Autoparty containers from [gdrive](https://drive.google.com/drive/folders/1wVrm-B-wXbRRP7lnt6qwnappj3C6gwf6?usp=sharing) and put them into a directory called 'containers'.
+2. Download start_autoparty_all.sh and place in same directory as 'containers' folder.
+3. Run ```start_autoparty_all.sh```. There are 5 required arguments:
+    1. 'mnt/' directory - where the database is located. The database will be created if it does not exist in the provided directory.
+    2. 'inputs' directory - where any input PDB/SDF files are located. All filepaths provided to Autoparty are interpreted relative to this path.
+    3. 'outputs' directory - the location to store files generated during Autoparty. 
+    4. Port (ex. 5000) that Autoparty will be accessible from. 
+    5. Number of concurrent processes (ex. 10) celery can spawn.
 
 To run manually:
+
 1. Install the necessary python packages with ```conda env create -f /environment.yml```
 
 In 3 seperate shell windows:
@@ -24,7 +32,7 @@ In 3 seperate shell windows:
 
 NOTE- There must be 3 folders within the Autoparty start directory: /inputs, /outputs/, and /mnt. Any input molecules/receptor files should be placed in this input directory.
 
-The application is then accessible through your internet browser at localhost:5000.
+The application is then accessible through your internet browser at localhost:\<selected_port\>.
 
 ---
 
@@ -51,17 +59,21 @@ The default model trained during a hitpicking party consists of three separate a
 Molecule interactions and fingerprints are generated and saved when a screen is first uploaded. In order to start a screen, the user needs to provide the path to the .pdb file and .sdf files, relative to the /inputs directory seen by Hitpicker. In addition to the files, the user needs to provide a property within the sdf file by which the molecules are initially ranked for annotation. Upon uploading, molecules are read from the provided sdf file and sent in batches of 50 to calculate intermolecular interactions. NOTE: This can be a long process, and hitpicking can begin while this is finishing.
 
 <b>Getting the party started</b>
+
 Once the screen is uploaded, the the actual hitpicking-session can begin. The user is able to either start a new party by selecting the uploaded screen, or resume an existing party to recover existing grades, models, and predictions.
 
 
 <b>Annotating Molecules</b>
+
 Upon beginning annotations, molecules are sorted by the score provided by the user during screen upload. The full list of molecules is displayed on the right. The available grades appear on the bottom of the screen. In 'Annotation' mode, molecules with grades are hidden, allowing the user to only view new molecules and sort them by either provided score or, if a model has been trained, predicted grade or uncertainty. In 'Review' mode, the user is able to view molecules they're already seen and regrade if their mind has changed. In this mode, there is an additional sorting method known as 'Disagreement', which shows the molecules with high certainty and a difference in prediction between the user's assigned grade and the model's prediction. 
 
 
 <b>Training a model </b>
+
 Once enough annotations have been submitted (we suggest at least 100) you can train a model and begin the human-in-the-loop active learning protocol. On the backend, all of the fingerprints and corresponding annotations from the current party are recovered from the database to use as a training set, and a model is trained to predict these labels. The trained model is then applied to all remaining molecules, predicting 1) the annotation(grade) for that molecule and 2) the models confidence in that predicted grade. Upon completion, the molecules are re-sorted based on the least to most confident, allowing the user to provide grades to examples that are the most informative to train the next round. This process continues until stopped by the user. The loss curves and model history are updated in real time and visible in the Training dashboard. 
 
 <b>Saving results</b>
+
 Once the party has is over, the user can save the final list of annotations along with the final model predictions and confidences by going to the Training dashboard and selecting 'Save Predictions'. These predictions are downloaded to a csv file containing the molecules id in the application database, the name of the molecule as provided in the sdf file, the score as provided in the sdf file, an assigned grade if found, the model prediction, if found, and the confidence in that prediction ("Uncertainty" column, lower indicates higher prediction confidence). For more comprehensive results, the "Party Results" button downloads a zipfile with this prediction csv, all trained model weights, loss curves for the most recent round of training, as well as all configuration files and the protein structure used for that party.
 
 ### Web Interface
@@ -109,9 +121,6 @@ Actions: There are four actions that can be triggered from this tab
 |   | patience | How long to wait before stopping training when running with validation set | int | 20 | (0,inf) |
 |Ensemble | committee_size | Number of models to train for ensemble uncertainty | int | 3 | (0,inf) |
 |  | data_split | Sampling method for ensemble training datasets | string | bootstrap | bootstrap,full_split |
-|Dropout | passes | Number of passes to run with dropout for uncertainty estimation | int | 50 | (0,inf) |
-|Distance | distance_method | Distance metric to use for uncertainty | string | 50 | tanimoto |
-|  | kNN | Number of nearest neighbors to use for kNN distance calculation | int | 3 | (0,inf) |
 
 ---
 
