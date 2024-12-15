@@ -1,0 +1,38 @@
+Bootstrap: docker
+From: ubuntu:18.04
+
+%files
+    ./* /
+
+%environment
+    export LC_ALL=C
+    export LC_NUMERIC=en_GB.UTF-8
+    export PATH="/opt/miniconda/bin:$PATH"
+    export PATH="/opt/miniconda/envs/$(head -1 /environment.yml | cut -d' ' -f2)/bin:$PATH"
+    export FLASK_APP="manage:application"
+
+%runscript
+    echo "conda activate ml3.9-luna" >> $SINGULARITY_ENVIRONMENT
+    exec /start_celery.sh "$@" & /start_autoparty.sh "$@"  
+
+%post
+    apt-get -y update
+    apt-get -y install build-essential wget cmake bzip2 libxrender-dev libxext-dev libsm-dev
+
+    # miniconda2: get miniconda2 version 4.5.1
+    wget https://repo.continuum.io/miniconda/Miniconda2-4.7.12.1-Linux-x86_64.sh -O miniconda.sh
+
+    #install conda
+    bash miniconda.sh -b -p /opt/miniconda
+    export PATH="/opt/miniconda/bin:$PATH"
+
+    #install conda env.yml file
+    echo ". /opt/miniconda/etc/profile.d/conda.sh" >> $SINGULARITY_ENVIRONMENT
+    /opt/miniconda/bin/conda env create -f /environment.yml
+    . /opt/miniconda/etc/profile.d/conda.sh
+    conda activate ml3.9-luna
+    pip install luna
+
+%startscript
+    echo "conda activate ml3.9-luna" >> $SINGULARITY_ENVIRONMENT
+    exec /start_celery.sh "$@" & /start_autoparty.sh "$@"
