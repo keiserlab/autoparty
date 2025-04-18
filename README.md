@@ -9,26 +9,68 @@ Autoparty is a Python-based application developed to assist scientists in analyz
 
 ## Installation
 
-To run from the singlularity container:
+### First step - Obtaining the Autoparty/Redis containers
 
-1. Download the redis and Autoparty containers from [gdrive](https://drive.google.com/drive/folders/1wVrm-B-wXbRRP7lnt6qwnappj3C6gwf6?usp=sharing) and put them into a directory called 'containers'.
-2. Download start_autoparty_all.sh and place in same directory as 'containers' folder.
-3. Run ```start_autoparty_all.sh```. There are 5 required arguments:
+#### Option 1: Building containers (requires root access)
+
+This is most easily done with singularity-compose. 
+
+1. Clone the github repository.
+2. Install singularity-compose with ```pip install singularity-compose```
+3. From the repository directory, run ```singularity-compose build```. This will generate autoparty/autoparty.sif and redis/redis.sif images.
+
+
+Alternatively, to build autoparty.sif manually:
+
+1. ```cd autoparty```
+2. Run ```sudo singularity build autoparty.sif Singularity.autoparty```. This will create autoparty.sif.
+
+### Option 2: Downloading prebuilt containers 
+
+
+1. Download the prebuilt Redis and Autoparty containers from [gdrive](https://drive.google.com/drive/folders/1wVrm-B-wXbRRP7lnt6qwnappj3C6gwf6?usp=sharing).
+
+
+### Second step - Starting Autoparty, Redis, and Celery
+
+The following steps assume that the current directory is set up with the following: 
+
+```
+.
+├── singularity-compose.yml
+├── autoparty
+│   └── Singularity.autoparty
+│   └── autoparty.sif
+├── redis
+│   └── Singularity.redis
+│   └── redis.sif
+```
+
+from building with singularity-compose or downloading the prebuilt containers
+
+### Option 1: singularity-compose. This option expected that you have the following file setup:
+
+1. In the directory with singularity-compose, run ```singularity-compose up```. This will start the Autoparty and Redis containers. To stop the software, run ```singularity-compose down```
+
+### Option 2: Start containers manually
+
+1. In the main directory, run ```start_autoparty_all.sh```. There are 5 required arguments:
     1. 'mnt/' directory - where the database is located. The database will be created if it does not exist in the provided directory.
     2. 'inputs' directory - where any input PDB/SDF files are located. All filepaths provided to Autoparty are interpreted relative to this path.
     3. 'outputs' directory - the location to store files generated during Autoparty. 
     4. Port (ex. 5000) that Autoparty will be accessible from. 
     5. Number of concurrent processes (ex. 10) celery can spawn.
 
-To run manually:
+### Run Autoparty from source code - no containers
 
-1. Install the necessary python packages with ```conda env create -f /environment.yml```
+1. Install the necessary python packages with ```conda env create -f autoparty/autoparty-env.yml```
+2. Activate Python environment with ```conda activate autoparty-env```
 
 In 3 seperate shell windows:
 
 2. Start redis-server with ```redis-server```
-3. Run ```./start_celery.sh 10```. The final number is the number of threads allocated for background tasks.
-4. Start the Autoparty app with ```./start_autoparty.sh```
+3. Run ```autoparty/start_celery.sh 10```. The final number is the number of threads allocated for background tasks.
+4. Start the Autoparty app with ```autoparty/start_autoparty.sh```
 
 NOTE- There must be 3 folders within the Autoparty start directory: /inputs, /outputs/, and /mnt. Any input molecules/receptor files should be placed in this input directory.
 
@@ -40,7 +82,13 @@ The application is then accessible through your internet browser at localhost:\<
 
 To ensure that the python environment and all python files are set up correctly, cd into the main directory and run 
 
-```python -m pytest tests ```
+```
+pip install pytest
+mv tests/ autoparty/ 
+mv testing_inputs/* autoparty/inputs
+cd autoparty
+python -m pytest tests
+```
 
 Note: these tests may take a few minutes to run.
 

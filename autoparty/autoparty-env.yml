@@ -1,0 +1,30 @@
+name: autoparty-env
+channels:
+  - defaults
+  - conda-forge   
+dependencies:
+  - python=3.7.6
+  - rdkit
+  - openbabel
+  - biopython=1.72
+  - networkx
+  - pip
+  - pip:
+      - Flask
+      - Flask-Migrate
+      - Flask-Login
+      - Flask-WTF
+      - celery==5.1.2
+      - torch
+      - python-decouple
+      - scipy
+      - xopen
+      - pdbecif
+      - colorlog
+      - mmh3==2.5.1
+      - scikit-learn
+      - tqdm
+      - redis
+      - importlib-metadata==4.13.0
+      - gunicorn
+prefix: autoparty-env

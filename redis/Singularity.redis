@@ -1,0 +1,5 @@
+Bootstrap: docker
+From: redis:6.2.3-alpine
+
+%startscript
+	exec redis-server

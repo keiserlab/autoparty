@@ -9,7 +9,7 @@ import datetime
 import json
 import numpy as np
 
-from sqlalchemy import desc, and_, or_
+from sqlalchemy import desc, and_, or_, func
 from sqlalchemy.sql import exists, false
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -53,7 +53,7 @@ def get_molecule_by_id(mol_id, return_grade = False, return_pred = False, party_
 def get_ordered_molecules(screen_id, party_id, name = None, orderby = "score", mode = "annotate", modetime = None,
 		limit = None, offset = None):
 
-	all_mols = db.session.query(Molecule).all()
+	#all_mols = db.session.query(Molecule).all()
 
 	"""
 	Return molecules that do NOT already have grades, sorted by requested method
@@ -82,12 +82,14 @@ def get_ordered_molecules(screen_id, party_id, name = None, orderby = "score", m
 		query = query.outerjoin(Prediction
 			).filter(Prediction.hp_settings_id == party_id)
 
-	unordered_mols = query.offset(offset).limit(limit).all()
+	#unordered_mols = query.offset(offset).limit(limit).all()
 	
 	# decide ordering - either score, uncertainty, prediction, or disagreement(error)
 	if orderby != 'name':
 		query = query.order_by(*orderby_dict[orderby])
-	total = query.count()
+	#total = query.count()
+	total = db.session.query(func.count(Molecule.id)).filter(
+		Molecule.run_id == screen_id).filter(~exclude).scalar()
 
 	mols = query.offset(offset).limit(limit).all()
 

@@ -1,0 +1,24 @@
+version: '1.0'
+
+instances:
+  autoparty:
+    build:
+      context: ./autoparty
+      recipe: Singularity.autoparty
+    volumes:
+      - ./mnt:/mnt
+      - ./outputs:/outputs
+      - ./inputs:/inputs
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_APP=manage:application
+    depends_on:
+      - redis
+  
+  redis:
+    build:
+      context: ./redis
+      recipe: Singularity.redis
+    ports: 
+      - "6379:6379"

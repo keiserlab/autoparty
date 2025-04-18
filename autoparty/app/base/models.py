@@ -117,6 +117,16 @@ class FingerprintDataset(Dataset):
     def reverse_convert(self, preds):
         if self.output_type == "ordinal":
             preds_idx = np.apply_along_axis(lambda x: sum(x > 0.5) - 1, 1, preds)
+            last_one = np.apply_along_axis(lambda x: np.nonzero(x > 0.5)[0].max(), 1, preds)
+
+            # check corner case where 1 happens after a 0
+            adj_idx = (preds_idx != last_one).nonzero()[0]
+
+            if adj_idx.shape[0] > 0:
+                options = np.tril(np.ones(preds.shape[1]))
+                adj_preds = (((preds[adj_idx][:, None, :] - options[None, :, :])**2).sum(-1)**0.5).argmin(axis=1)
+                preds_idx[adj_idx] = adj_preds
+
             return [self.options[idx] for idx in preds_idx]
         else: # classes, not ordinal labels - return closest option
             if not self.options:

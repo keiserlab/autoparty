@@ -3,7 +3,7 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField
 from wtforms import StringField, PasswordField, RadioField, SelectField, IntegerField, BooleanField, SubmitField
-from wtforms.validators import Required, InputRequired, DataRequired
+from wtforms.validators import InputRequired, DataRequired
 
 ## login and registration
 

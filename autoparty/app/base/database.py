@@ -90,7 +90,7 @@ class Molecule(db.Model, Serializer):
 
     smi = Column(PickleType) # pickled smiles string
     mol = Column(PickleType) # pickled molblock
-    score = Column(Float)
+    score = Column(Float, index=True)
     ifp = Column(PickleType)
     inters = Column(JSON)
     meta = Column(JSON)

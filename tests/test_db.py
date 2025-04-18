@@ -1,6 +1,7 @@
 import pytest
 
 import json
+from sqlalchemy import inspect
 
 from app import create_app, db
 from config import config_dict
@@ -21,7 +22,7 @@ def test_database_schema(app):
 	"""
 	Check that database has been created correctly and has expected columns
 	"""
-	table_names = db.engine.table_names()
+	table_names = inspect(db.engine).get_table_names()
 	assert all([ table in table_names for table in  \
 		['grades', 'hp_run_settings', 'molecules', 'predictions', 'preloaded', 'user']])
 
@@ -54,7 +55,7 @@ def test_drop_all(app):
 	"""
 	db.drop_all()
 
-	assert len(db.engine.table_names()) == 0
+	assert len(inspect(db.engine).get_table_names()) == 0
 	try:
 		mol = Molecules.query.one()
 		assert False # if we make it this far, something has done wrong

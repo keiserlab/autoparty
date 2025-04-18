@@ -2,6 +2,7 @@
 import pytest
 
 import numpy as np, torch
+from sqlalchemy import inspect
 
 from app import create_app, db
 from config import config_dict as app_config_dict
@@ -144,7 +145,7 @@ def test_drop_all(app):
 	"""
 	db.drop_all()
 
-	assert len(db.engine.table_names()) == 0
+	assert len(inspect(db.engine).get_table_names()) == 0
 	try:
 		mol = Molecules.query.one()
 		assert False # if we make it this far, something has done wrong
