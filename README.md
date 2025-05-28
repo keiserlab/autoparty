@@ -65,6 +65,8 @@ from building with singularity-compose or downloading the prebuilt containers
 
 1. Install the necessary python packages with ```conda env create -f autoparty/autoparty-env.yml```
 2. Activate Python environment with ```conda activate autoparty-env```
+3. Install remaining necessary packages ```pip install luna```
+4. Install redis, following directions found [here](https://redis.io/docs/latest/operate/oss_and_stack/install/archive/install-redis/)
 
 In 3 seperate shell windows:
 
