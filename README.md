@@ -9,9 +9,9 @@ Autoparty is a Python-based application developed to assist scientists in analyz
 
 ## Installation
 
-### First step - Obtaining the Autoparty/Redis containers
+## First step - Obtaining the Autoparty/Redis containers
 
-#### Option 1: Building containers (requires root access)
+### Option 1: Building containers (requires root access)
 
 This is most easily done with singularity-compose. 
 
@@ -31,7 +31,7 @@ Alternatively, to build autoparty.sif manually:
 1. Download the prebuilt Redis and Autoparty containers from [gdrive](https://drive.google.com/drive/folders/1wVrm-B-wXbRRP7lnt6qwnappj3C6gwf6?usp=sharing).
 
 
-### Second step - Starting Autoparty, Redis, and Celery
+## Second step - Starting Autoparty, Redis, and Celery
 
 The following steps assume that the current directory is set up with the following: 
 
@@ -61,12 +61,11 @@ from building with singularity-compose or downloading the prebuilt containers
     4. Port (ex. 5000) that Autoparty will be accessible from. 
     5. Number of concurrent processes (ex. 10) celery can spawn.
 
-### Run Autoparty from source code - no containers
+## Alternate installation: Run Autoparty from source code, without containers
 
 1. Install the necessary python packages with ```conda env create -f autoparty/autoparty-env.yml```
 2. Activate Python environment with ```conda activate autoparty-env```
-3. Install remaining necessary packages ```pip install luna```
-4. Install redis, following directions found [here](https://redis.io/docs/latest/operate/oss_and_stack/install/archive/install-redis/)
+3. Install remaining necessary packages ```pip install luna; pip install redis-server```
 
 In 3 seperate shell windows:
 
@@ -93,6 +92,15 @@ python -m pytest tests
 ```
 
 Note: these tests may take a few minutes to run.
+
+---
+### Common Issues
+
+* Installation
+  - If running on an M1/M2 Macbook from source, you will need to run ```conda config --set subdir osx-64``` prior to creating the conda environment from the provided .yml file
+ 
+* Runtime
+   - On clean installs, occassionally on the first hitpicking page the alert '' will popup. Refreshing the page should remove this alert.
 
 ---
 ### Interaction Calculation
