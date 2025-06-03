@@ -3,10 +3,9 @@ channels:
   - defaults
   - conda-forge   
 dependencies:
-  - python=3.7.6
   - rdkit
-  - openbabel
-  - biopython=1.72
+  - openbabel=3.1.0
+  - python=3.7
   - networkx
   - pip
   - pip:
@@ -14,7 +13,7 @@ dependencies:
       - Flask-Migrate
       - Flask-Login
       - Flask-WTF
-      - celery==5.1.2
+      - celery
       - torch
       - python-decouple
       - scipy
@@ -27,4 +26,5 @@ dependencies:
       - redis
       - importlib-metadata==4.13.0
       - gunicorn
+      - biopython==1.72
 prefix: autoparty-env
