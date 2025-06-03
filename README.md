@@ -100,7 +100,7 @@ Note: these tests may take a few minutes to run.
   - If running on an M1/M2 Macbook from source, you will need to run ```conda config --set subdir osx-64``` prior to creating the conda environment from the provided .yml file
  
 * Runtime
-   - On clean installs, occassionally on the first hitpicking page the alert '' will popup. Refreshing the page should remove this alert.
+   - On clean installs, occassionally on the first hitpicking page the alert 'No molecules found - did you forget to train a model?' will pop up. Refreshing the page should remove this alert.
 
 ---
 ### Interaction Calculation
